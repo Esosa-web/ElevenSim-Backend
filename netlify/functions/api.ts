@@ -2,35 +2,25 @@ import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import cors from 'cors';
-import path from 'path';
 import { ObjectId } from 'mongodb';
-import User from './models/User';
-import Team from './models/Teams';
-import Player from './models/Player';
-import Match from './models/Match';
+import serverless from 'serverless-http';
 
-dotenv.config();
+import User from '../../src/models/User';
+import Team from '../../src/models/Teams';
+import Player from '../../src/models/Player';
+import Match from '../../src/models/Match';
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors());
 
 // Connect to MongoDB
-console.log('Connecting to:', process.env.MONGODB_URI);
-mongoose.connect(process.env.MONGODB_URI || '', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
-  });
+const mongoUri = process.env.MONGODB_URI || '';
+mongoose.connect(mongoUri)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('Error connecting to MongoDB:', error));
 
 // Updated wrapper function for async route handlers
 const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
@@ -68,19 +58,8 @@ app.post('/api/auth/login', asyncHandler(async (req, res) => {
 
 // Team routes
 app.get('/api/teams', asyncHandler(async (req, res) => {
-  console.log('Fetching teams...');
-  try {
-    const teams = await Team.find().populate('players');
-    console.log('Teams fetched:', teams);
-    res.json(teams);
-  } catch (error: unknown) {
-    console.error('Error fetching teams:', error);
-    if (error instanceof Error) {
-      res.status(500).json({ message: 'Error fetching teams', error: error.message });
-    } else {
-      res.status(500).json({ message: 'Error fetching teams', error: 'An unknown error occurred' });
-    }
-  }
+  const teams = await Team.find().populate('players');
+  res.json(teams);
 }));
 
 app.get('/api/teams/:id', asyncHandler(async (req, res) => {
@@ -191,16 +170,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ message: 'An unexpected error occurred', error: err.message });
 });
 
-// Serve static files AFTER API routes
-if (process.env.NODE_ENV === 'production') {
-  const frontendBuildPath = path.join(__dirname, '../../frontend/build');
-  app.use(express.static(frontendBuildPath));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
-}
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+export const handler = serverless(app);
