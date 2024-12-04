@@ -2,14 +2,17 @@ import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
 import { ObjectId } from 'mongodb';
-import serverless from 'serverless-http';
+import User from '../../src/models/User.js';
+import Team from '../../src/models/Teams.js';
+import Player from '../../src/models/Player.js';
+import Match from '../../src/models/Match.js';
+import serverless from "serverless-http"  // added this new import
 
-import User from '../../src/models/User';
-import Team from '../../src/models/Teams';
-import Player from '../../src/models/Player';
-import Match from '../../src/models/Match';
+dotenv.config();
 
 const app = express();
 
@@ -17,10 +20,17 @@ app.use(express.json());
 app.use(cors());
 
 // Connect to MongoDB
-const mongoUri = process.env.MONGODB_URI || '';
-mongoose.connect(mongoUri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('Error connecting to MongoDB:', error));
+console.log('Connecting to:', process.env.MONGODB_URI);
+mongoose.connect(process.env.MONGODB_URI || '', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('Error connecting to MongoDB:', error);
+  });
 
 // Updated wrapper function for async route handlers
 const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
@@ -58,8 +68,19 @@ app.post('/api/auth/login', asyncHandler(async (req, res) => {
 
 // Team routes
 app.get('/api/teams', asyncHandler(async (req, res) => {
-  const teams = await Team.find().populate('players');
-  res.json(teams);
+  console.log('Fetching teams...');
+  try {
+    const teams = await Team.find().populate('players');
+    console.log('Teams fetched:', teams);
+    res.json(teams);
+  } catch (error: unknown) {
+    console.error('Error fetching teams:', error);
+    if (error instanceof Error) {
+      res.status(500).json({ message: 'Error fetching teams', error: error.message });
+    } else {
+      res.status(500).json({ message: 'Error fetching teams', error: 'An unknown error occurred' });
+    }
+  }
 }));
 
 app.get('/api/teams/:id', asyncHandler(async (req, res) => {
@@ -169,5 +190,15 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ message: 'An unexpected error occurred', error: err.message });
 });
+
+// Serve static files AFTER API routes
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = path.join(__dirname, '../../frontend/build');
+  app.use(express.static(frontendBuildPath));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  });
+}
 
 export const handler = serverless(app);

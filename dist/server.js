@@ -19,6 +19,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path"));
+const mongodb_1 = require("mongodb");
 const User_1 = __importDefault(require("./models/User"));
 const Teams_1 = __importDefault(require("./models/Teams"));
 const Player_1 = __importDefault(require("./models/Player"));
@@ -33,8 +34,6 @@ console.log('Connecting to:', process.env.MONGODB_URI);
 mongoose_1.default.connect(process.env.MONGODB_URI || '', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
 })
     .then(() => {
     console.log('Connected to MongoDB');
@@ -73,37 +72,6 @@ app.post('/api/auth/login', asyncHandler((req, res) => __awaiter(void 0, void 0,
     const token = jsonwebtoken_1.default.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, userId: user._id });
 })));
-// User routes
-app.get('/api/users', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const users = yield User_1.default.find().populate('teams');
-    res.json(users);
-})));
-app.get('/api/users/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = yield User_1.default.findById(req.params.id).populate('teams');
-    if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-    }
-    res.json(user);
-})));
-app.post('/api/users', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const newUser = new User_1.default(req.body);
-    const savedUser = yield newUser.save();
-    res.status(201).json(savedUser);
-})));
-app.put('/api/users/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const updatedUser = yield User_1.default.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedUser) {
-        return res.status(404).json({ message: 'User not found' });
-    }
-    res.json(updatedUser);
-})));
-app.delete('/api/users/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const deletedUser = yield User_1.default.findByIdAndDelete(req.params.id);
-    if (!deletedUser) {
-        return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({ message: 'User deleted successfully' });
-})));
 // Team routes
 app.get('/api/teams', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Fetching teams...');
@@ -123,7 +91,7 @@ app.get('/api/teams', asyncHandler((req, res) => __awaiter(void 0, void 0, void 
     }
 })));
 app.get('/api/teams/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const team = yield Teams_1.default.findById(req.params.id).populate('players');
+    const team = yield Teams_1.default.findById(new mongodb_1.ObjectId(req.params.id)).populate('players');
     if (!team) {
         return res.status(404).json({ message: 'Team not found' });
     }
@@ -135,14 +103,14 @@ app.post('/api/teams', asyncHandler((req, res) => __awaiter(void 0, void 0, void
     res.status(201).json(savedTeam);
 })));
 app.put('/api/teams/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const updatedTeam = yield Teams_1.default.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedTeam = yield Teams_1.default.findByIdAndUpdate(new mongodb_1.ObjectId(req.params.id), req.body, { new: true });
     if (!updatedTeam) {
         return res.status(404).json({ message: 'Team not found' });
     }
     res.json(updatedTeam);
 })));
 app.delete('/api/teams/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const deletedTeam = yield Teams_1.default.findByIdAndDelete(req.params.id);
+    const deletedTeam = yield Teams_1.default.findByIdAndDelete(new mongodb_1.ObjectId(req.params.id));
     if (!deletedTeam) {
         return res.status(404).json({ message: 'Team not found' });
     }
@@ -150,24 +118,11 @@ app.delete('/api/teams/:id', asyncHandler((req, res) => __awaiter(void 0, void 0
 })));
 // Player routes
 app.get('/api/players', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Fetching players...');
-    try {
-        const players = yield Player_1.default.find().populate('team', 'name');
-        console.log('Players fetched:', players);
-        res.json(players);
-    }
-    catch (error) {
-        console.error('Error fetching players:', error);
-        if (error instanceof Error) {
-            res.status(500).json({ message: 'Error fetching players', error: error.message });
-        }
-        else {
-            res.status(500).json({ message: 'Error fetching players', error: 'An unknown error occurred' });
-        }
-    }
+    const players = yield Player_1.default.find().populate('team', 'name');
+    res.json(players);
 })));
 app.get('/api/players/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const player = yield Player_1.default.findById(req.params.id).populate('team');
+    const player = yield Player_1.default.findById(new mongodb_1.ObjectId(req.params.id)).populate('team');
     if (!player) {
         return res.status(404).json({ message: 'Player not found' });
     }
@@ -179,14 +134,14 @@ app.post('/api/players', asyncHandler((req, res) => __awaiter(void 0, void 0, vo
     res.status(201).json(savedPlayer);
 })));
 app.put('/api/players/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const updatedPlayer = yield Player_1.default.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedPlayer = yield Player_1.default.findByIdAndUpdate(new mongodb_1.ObjectId(req.params.id), req.body, { new: true });
     if (!updatedPlayer) {
         return res.status(404).json({ message: 'Player not found' });
     }
     res.json(updatedPlayer);
 })));
 app.delete('/api/players/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const deletedPlayer = yield Player_1.default.findByIdAndDelete(req.params.id);
+    const deletedPlayer = yield Player_1.default.findByIdAndDelete(new mongodb_1.ObjectId(req.params.id));
     if (!deletedPlayer) {
         return res.status(404).json({ message: 'Player not found' });
     }
@@ -198,7 +153,7 @@ app.get('/api/matches', asyncHandler((req, res) => __awaiter(void 0, void 0, voi
     res.json(matches);
 })));
 app.get('/api/matches/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const match = yield Match_1.default.findById(req.params.id).populate('teams.team players');
+    const match = yield Match_1.default.findById(new mongodb_1.ObjectId(req.params.id)).populate('teams.team players');
     if (!match) {
         return res.status(404).json({ message: 'Match not found' });
     }
@@ -210,14 +165,14 @@ app.post('/api/matches', asyncHandler((req, res) => __awaiter(void 0, void 0, vo
     res.status(201).json(savedMatch);
 })));
 app.put('/api/matches/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const updatedMatch = yield Match_1.default.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedMatch = yield Match_1.default.findByIdAndUpdate(new mongodb_1.ObjectId(req.params.id), req.body, { new: true });
     if (!updatedMatch) {
         return res.status(404).json({ message: 'Match not found' });
     }
     res.json(updatedMatch);
 })));
 app.delete('/api/matches/:id', asyncHandler((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const deletedMatch = yield Match_1.default.findByIdAndDelete(req.params.id);
+    const deletedMatch = yield Match_1.default.findByIdAndDelete(new mongodb_1.ObjectId(req.params.id));
     if (!deletedMatch) {
         return res.status(404).json({ message: 'Match not found' });
     }
