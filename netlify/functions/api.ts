@@ -20,17 +20,18 @@ app.use(express.json());
 app.use(cors());
 
 // Connect to MongoDB
-console.log('Connecting to:', process.env.MONGODB_URI);
-mongoose.connect(process.env.MONGODB_URI || '', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
+async function start() {
+  const mongoUrl = process.env.MONGODB_URI as string; // Ensure the variable name matches our .env
+  console.log('Connecting to:', mongoUrl);
+  await mongoose.connect(mongoUrl, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
   });
+}
+
+start().catch((error) => {
+  console.error('Error connecting to MongoDB:', error);
+});
 
 // Updated wrapper function for async route handlers
 const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
