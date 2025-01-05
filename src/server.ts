@@ -10,6 +10,8 @@ import User from './models/User';
 import Team from './models/Teams';
 import Player from './models/Player';
 import Match from './models/Match';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './config/swagger';
 
 dotenv.config();
 
@@ -200,6 +202,8 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));
   });
 }
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

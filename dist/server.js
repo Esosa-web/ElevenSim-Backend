@@ -24,6 +24,8 @@ const User_1 = __importDefault(require("./models/User"));
 const Teams_1 = __importDefault(require("./models/Teams"));
 const Player_1 = __importDefault(require("./models/Player"));
 const Match_1 = __importDefault(require("./models/Match"));
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const swagger_1 = require("./config/swagger");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
@@ -191,6 +193,7 @@ if (process.env.NODE_ENV === 'production') {
         res.sendFile(path_1.default.join(frontendBuildPath, 'index.html'));
     });
 }
+app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.specs));
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
